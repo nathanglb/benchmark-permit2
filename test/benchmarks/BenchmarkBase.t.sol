@@ -35,7 +35,7 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
         uint256 observations;
     }
 
-    uint256 internal USER_STARTING_BALANCE = 1_000_000_000;
+    uint256 internal USER_STARTING_BALANCE = 1_000_000_000_000_000;
     uint256 internal BENCHMARK_TRANSFER_AMOUNT = 1_000_000;
 
     bool constant DEBUG_ACCESSES = false;
