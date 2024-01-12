@@ -513,7 +513,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes32 witness = keccak256(abi.encode(witnessData));
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig = getPermitWitnessTransferSignature(
-            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR, address(this)
         );
 
         uint256 startBalanceFrom = token0.balanceOf(from);
@@ -535,7 +535,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes32 witness = keccak256(abi.encode(witnessData));
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig = getPermitWitnessTransferSignature(
-            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR, address(this)
         );
 
         ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
@@ -550,7 +550,7 @@ contract SignatureTransferTest is Test, PermitSignature, TokenProvider, GasSnaps
         bytes32 witness = keccak256(abi.encode(witnessData));
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token0), nonce);
         bytes memory sig =
-            getPermitWitnessTransferSignature(permit, fromPrivateKey, "fake typehash", witness, DOMAIN_SEPARATOR);
+            getPermitWitnessTransferSignature(permit, fromPrivateKey, "fake typehash", witness, DOMAIN_SEPARATOR, address(this));
 
         ISignatureTransfer.SignatureTransferDetails memory transferDetails = getTransferDetails(address2, defaultAmount);
 

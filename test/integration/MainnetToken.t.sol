@@ -155,7 +155,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
         bytes32 witness = keccak256(abi.encode(witnessData));
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token()), NONCE);
         bytes memory sig = getPermitWitnessTransferSignature(
-            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR
+            permit, fromPrivateKey, FULL_EXAMPLE_WITNESS_TYPEHASH, witness, DOMAIN_SEPARATOR, address(this)
         );
 
         uint256 startBalanceFrom = token().balanceOf(from);

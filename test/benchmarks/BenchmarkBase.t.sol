@@ -53,6 +53,10 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
 
     mapping (address => uint256) internal _nonces;
 
+    bytes32 constant MOAR_DATA_HASH = bytes32(0x5a0a5e37edea5678163ef5d7e3aff3ccb4b01f5ad7f84f07b8d55e784223613b);
+    bytes32 constant MOAR_DATA_PERMIT_HASH = bytes32(0x4642bb0b01d8bc59f6e90f341ca4ab51207530674e23f9f7df05f2fd07b89e2e);
+    string constant MOAR_DATA_TYPE_STRING = "MoarData data)MoarData(uint256 one,uint256 two,uint256 three,uint256 four,uint256 five,uint256 six)";
+
     function setUp() public virtual {
         setUpMetering({verbose: false});
 
@@ -95,8 +99,9 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
         gasMetrics.observations++;
     }
 
-    function _logGasMetrics(bool manuallyMetered_) internal {
+    function _logGasMetrics(bool manuallyMetered_, string memory label) internal {
         if (manuallyMetered_) {
+            console.log(label);
             console.log("Min: %s", gasMetrics.min);
             console.log("Max: %s", gasMetrics.max);
             console.log("Avg: %s", gasMetrics.total / gasMetrics.observations);
@@ -147,7 +152,7 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
         return ISignatureTransfer.SignatureTransferDetails({to: to, requestedAmount: amount});
     }
 
-    function _runBenchmarkCancelNonce(bool manuallyMetered_, uint256 runs) internal {
+    function _runBenchmarkCancelNonce(bool manuallyMetered_, uint256 runs, string memory label) internal {
          _clearGasMetrics();
 
         for (uint256 i = 0; i < runs; i++) {
@@ -155,8 +160,8 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
             (uint256 wordPos, uint256 bitPos) = _bitmapPositions(nonce);
 
             if (!manuallyMetered_) {
-                vm.prank(alice);
                 _record();
+                vm.prank(alice);
                 permit2.invalidateUnorderedNonces(wordPos, bitPos);
                 _logAccesses(address(permit2));
             } else {
@@ -176,10 +181,10 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
             }
         }
 
-        _logGasMetrics(manuallyMetered_);
+        _logGasMetrics(manuallyMetered_, label);
     }
 
-    function _runBenchmarkPermitTransferFromERC20(bool manuallyMetered_, uint256 runs) internal {
+    function _runBenchmarkPermitTransferFromERC20(bool manuallyMetered_, uint256 runs, string memory label) internal {
         _clearGasMetrics();
 
         for (uint256 i = 0; i < runs; i++) {
@@ -189,8 +194,8 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
             ISignatureTransfer.SignatureTransferDetails memory transferDetails = _getTransferDetails(bob, BENCHMARK_TRANSFER_AMOUNT);
 
             if (!manuallyMetered_) {
-                vm.prank(address(operator), alice);
                 _record();
+                vm.prank(address(operator), alice);
                 permit2.permitTransferFrom(
                     permit, 
                     transferDetails, 
@@ -217,6 +222,52 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
             
         }
 
-        _logGasMetrics(manuallyMetered_);
+        _logGasMetrics(manuallyMetered_, label);
+    }
+
+    function _runBenchmarkPermitTransferFromWithAdditionalDataStringERC20(bool manuallyMetered_, uint256 runs, string memory label) internal {
+        _clearGasMetrics();
+
+        for (uint256 i = 0; i < runs; i++) {
+            bytes32 witness = keccak256(abi.encode(MOAR_DATA_HASH, 1, 2, 3, 4, 5, 6));
+            uint256 nonce = _getNextNonce(alice);
+            ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitWitnessTransfer(address(token20), nonce);
+            bytes memory sig = getPermitWitnessTransferSignature(permit, alicePk, MOAR_DATA_PERMIT_HASH, witness, permit2.DOMAIN_SEPARATOR(), address(operator));
+            ISignatureTransfer.SignatureTransferDetails memory transferDetails = _getTransferDetails(bob, BENCHMARK_TRANSFER_AMOUNT);
+
+            if (!manuallyMetered_) {
+                _record();
+                vm.prank(address(operator), alice);
+                permit2.permitWitnessTransferFrom(
+                    permit, 
+                    transferDetails, 
+                    alice, 
+                    witness,
+                    MOAR_DATA_TYPE_STRING,
+                    sig);
+                _logAccesses(address(permit2));
+            } else {
+                (uint256 gasUsed,) = meterCall({
+                    from: address(operator),
+                    to: address(permit2),
+                    callData: abi.encodeWithSignature(
+                        "permitWitnessTransferFrom(((address,uint256),uint256,uint256),(address,uint256),address,bytes32,string,bytes)",
+                        permit,
+                        transferDetails,
+                        alice,
+                        witness,
+                        MOAR_DATA_TYPE_STRING,
+                        sig
+                    ),
+                    value: 0,
+                    transaction: true
+                });
+
+                _updateGasMetrics(gasUsed);
+            }
+            
+        }
+
+        _logGasMetrics(manuallyMetered_, label);
     }
 }

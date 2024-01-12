@@ -159,7 +159,8 @@ contract PermitSignature {
         uint256 privateKey,
         bytes32 typehash,
         bytes32 witness,
-        bytes32 domainSeparator
+        bytes32 domainSeparator,
+        address operator
     ) internal view returns (bytes memory sig) {
         bytes32 tokenPermissions = keccak256(abi.encode(_TOKEN_PERMISSIONS_TYPEHASH, permit.permitted));
 
@@ -167,7 +168,7 @@ contract PermitSignature {
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
-                keccak256(abi.encode(typehash, tokenPermissions, address(this), permit.nonce, permit.deadline, witness))
+                keccak256(abi.encode(typehash, tokenPermissions, operator, permit.nonce, permit.deadline, witness))
             )
         );
 
