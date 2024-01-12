@@ -379,4 +379,52 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
 
         _logGasMetrics(manuallyMetered_, label);
     }
+
+    function _runBenchmarkApprovedTransferFromERC20(bool manuallyMetered_, uint256 runs, string memory label) internal {
+        _clearGasMetrics();
+
+        for (uint256 i = 0; i < runs; i++) {
+            TransferPermit memory permitRequest = TransferPermit({
+                token: address(token20),
+                id: 0,
+                amount: BENCHMARK_TRANSFER_AMOUNT,
+                nonce: _getNextNonce(alice),
+                operator: address(operator),
+                expiration: block.timestamp + 1000,
+                signerKey: alicePk,
+                owner: alice,
+                to: bob
+            });
+    
+            if (!manuallyMetered_) {
+                _record();
+                vm.prank(address(operator), alice);
+                permit2.transferFrom(
+                    permitRequest.owner,
+                    permitRequest.to,
+                    uint160(permitRequest.amount),
+                    permitRequest.token
+                );
+                _logAccesses(address(permit2));
+            } else {
+                (uint256 gasUsed,) = meterCall({
+                    from: address(operator),
+                    to: address(permit2),
+                    callData: abi.encodeWithSignature(
+                        "transferFrom(address,address,uint160,address)", 
+                        permitRequest.owner,
+                        permitRequest.to,
+                        uint160(permitRequest.amount),
+                        permitRequest.token
+                    ),
+                    value: 0,
+                    transaction: true
+                });
+
+                _updateGasMetrics(gasUsed);
+            }
+        }
+
+        _logGasMetrics(manuallyMetered_, label);
+    }
 }
