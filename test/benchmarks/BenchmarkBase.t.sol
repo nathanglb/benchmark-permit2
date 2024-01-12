@@ -270,4 +270,113 @@ contract BenchmarkBase is MainnetMetering, Test, PermitSignature {
 
         _logGasMetrics(manuallyMetered_, label);
     }
+
+    function _runBenchmarkApproveERC20(bool manuallyMetered_, uint256 runs, string memory label) internal {
+        _clearGasMetrics();
+
+        for (uint256 i = 0; i < runs; i++) {
+            TransferPermit memory permitRequest = TransferPermit({
+                token: address(token20),
+                id: 0,
+                amount: BENCHMARK_TRANSFER_AMOUNT,
+                nonce: _getNextNonce(alice),
+                operator: address(operator),
+                expiration: block.timestamp + 1000,
+                signerKey: alicePk,
+                owner: alice,
+                to: bob
+            });
+
+            if (!manuallyMetered_) {
+                _record();
+                vm.prank(alice);
+                permit2.approve(
+                    permitRequest.token,
+                    permitRequest.operator,
+                    uint160(permitRequest.amount),
+                    uint48(permitRequest.expiration)
+                );
+                _logAccesses(address(permit2));
+            } else {
+                (uint256 gasUsed,) = meterCall({
+                    from: alice,
+                    to: address(permit2),
+                    callData: abi.encodeWithSignature(
+                        "approve(address,address,uint160,uint48)", 
+                        permitRequest.token,
+                        permitRequest.operator,
+                        uint160(permitRequest.amount),
+                        uint48(permitRequest.expiration)
+                    ),
+                    value: 0,
+                    transaction: true
+                });
+
+                _updateGasMetrics(gasUsed);
+            }
+        }
+
+        _logGasMetrics(manuallyMetered_, label);
+    }
+
+    function _runBenchmarkSignatureApproveERC20(bool manuallyMetered_, uint256 runs, string memory label) internal {
+        _clearGasMetrics();
+
+        for (uint256 i = 0; i < runs; i++) {
+            (,,uint48 nonce) = permit2.allowance(alice, address(token20), address(operator));
+
+            TransferPermit memory permitRequest = TransferPermit({
+                token: address(token20),
+                id: 0,
+                amount: BENCHMARK_TRANSFER_AMOUNT,
+                nonce: nonce,
+                operator: address(operator),
+                expiration: block.timestamp + 1000,
+                signerKey: alicePk,
+                owner: alice,
+                to: bob
+            });
+
+            IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
+                details: IAllowanceTransfer.PermitDetails({
+                    token: permitRequest.token,
+                    amount: uint160(permitRequest.amount),
+                    expiration: uint48(permitRequest.expiration),
+                    nonce: uint48(permitRequest.nonce)
+                }),
+                spender: permitRequest.operator,
+                sigDeadline: permitRequest.expiration
+            });
+
+            bytes memory sig = getPermitSignature(permitSingle, alicePk, permit2.DOMAIN_SEPARATOR());
+
+            if (!manuallyMetered_) {
+                _record();
+                vm.prank(alice);
+                permit2.permit(
+                    permitRequest.owner,
+                    permitSingle,
+                    sig
+                );
+                _logAccesses(address(permit2));
+            } else {
+                (uint256 gasUsed,) = meterCall({
+                    from: alice,
+                    to: address(permit2),
+                    callData: abi.encodeWithSignature(
+                        "permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)", 
+                        permitRequest.owner,
+                        permitSingle,
+                        sig
+                    ),
+                    value: 0,
+                    transaction: true
+                });
+
+                _updateGasMetrics(gasUsed);
+            }
+        }
+
+        _logGasMetrics(manuallyMetered_, label);
+    }
 }
