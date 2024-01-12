@@ -136,7 +136,7 @@ abstract contract MainnetTokenTest is Test, PermitSignature {
 
     function testPermitTransferFrom() public {
         ISignatureTransfer.PermitTransferFrom memory permit = defaultERC20PermitTransfer(address(token()), NONCE);
-        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR);
+        bytes memory sig = getPermitTransferSignature(permit, fromPrivateKey, DOMAIN_SEPARATOR, address(this));
 
         uint256 startBalanceFrom = token().balanceOf(from);
         uint256 startBalanceTo = token().balanceOf(RECIPIENT);
